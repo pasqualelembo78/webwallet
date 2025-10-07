@@ -1,2 +1,3 @@
 Il file api.php va in /var/www/mevacoin
   Il file index.html va in /www/ progetto app
+I file mevacoin-api-proxy vanno in /opt/
