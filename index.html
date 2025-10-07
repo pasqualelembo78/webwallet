@@ -2,92 +2,202 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Wallet API - Mevacoin</title>
 <style>
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    max-width: 900px;
-    margin: 24px auto;
+    max-width: 980px;
+    margin: 20px auto;
     background: #f0f2f5;
-    padding: 24px;
+    padding: 20px;
     border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    box-shadow: 0 6px 30px rgba(0,0,0,0.08);
     color: #222;
 }
-h1 { text-align: center; color: #1976d2; margin-bottom: 18px; }
+h1 { text-align: center; color: #1976d2; margin-bottom: 12px; }
 label { display:block; margin-top:10px; font-weight:600; }
-input, textarea, select { width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; font-size:14px; }
+input, textarea, select {
+    width:100%;
+    padding:8px;
+    margin-top:6px;
+    border-radius:6px;
+    border:1px solid #ccc;
+    box-sizing:border-box;
+    font-size:14px;
+}
 textarea { min-height:90px; font-family: monospace; }
 .row { display:flex; gap:10px; }
 .col { flex:1; }
-button { margin:8px 6px 0 0; padding:8px 12px; border-radius:8px; border:none; background:#1976d2; color:#fff; cursor:pointer; font-weight:700; }
+button {
+    margin:8px 6px 0 0;
+    padding:8px 12px;
+    border-radius:8px;
+    border:none;
+    background:#1976d2;
+    color:#fff;
+    cursor:pointer;
+    font-weight:700;
+}
 button.warn { background:#f57c00; }
-#output { margin-top:16px; padding:12px; background:#272822; color:#f8f8f2; border-radius:8px; white-space:pre-wrap; max-height:420px; overflow:auto; font-size:13px; }
-.section { margin-top:14px; padding:12px; background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.03); }
+#output {
+    margin-top:16px;
+    padding:12px;
+    background:#272822;
+    color:#f8f8f2;
+    border-radius:8px;
+    white-space:pre-wrap;
+    max-height:420px;
+    overflow:auto;
+    font-size:13px;
+}
+.section {
+    margin-top:0;
+    padding:12px;
+    background:#fff;
+    border-radius:0 0 8px 8px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.03);
+}
 .small { font-size:12px; color:#666; }
 .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .inline { display:inline-block; vertical-align:middle; }
+.field-inline { display:flex; gap:8px; align-items:center; }
+.note { font-size:12px; color:#666; margin-top:6px; }
+
+/* Accordion */
+details {
+    margin-top: 12px;
+    background: transparent;
+    border-radius: 8px;
+    overflow: hidden;
+}
+summary {
+    cursor: pointer;
+    padding: 12px 14px;
+    font-weight: 700;
+    background: linear-gradient(180deg,#1976d2,#1565c0);
+    color: #fff;
+    list-style: none;
+    user-select: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+summary .label { display:flex; gap:10px; align-items:center; }
+summary .chev {
+    font-size: 14px;
+    opacity: 0.9;
+    transition: transform .18s ease;
+}
+details[open] summary .chev { transform: rotate(90deg); }
+details .section { padding: 12px; box-shadow: none; background: #fff; border-radius: 0 0 8px 8px; }
+
+/* Responsive */
+@media (max-width:520px){
+  .grid2 { grid-template-columns: 1fr; }
+  summary { font-size: 15px; padding:10px; }
+  button { padding:10px; width:100%; box-sizing:border-box; }
+}
 </style>
 </head>
 <body>
 
 <h1>Wallet API - Mevacoin</h1>
+<h2 class="disclaimer" style="color:#d32f2f; font-weight:700;">
+ 鈿狅笍 ATTENZIONE: Questo wallet 猫 <strong>non custodial</strong>.<br>
+ Sei l鈥檜nico responsabile della sicurezza delle tue chiavi private e del seed.<br>
+ L鈥檃pp NON memorizza n茅 trasferisce fondi da server e NON garantisce guadagni o ricompense.<br>
+ Effettua backup sicuri dei tuoi wallet. Usalo a tuo rischio.
+</h2>
 
-<div class="section">
-    <label>Seleziona wallet (file .wallet)</label>
+<!-- Wallet file / name / password -->
+<details open>
+  <summary><span class="label">馃搧 Wallet / Credenziali</span> <span class="chev">鈻�</span></summary>
+  <div class="section">
+    <label>Seleziona file wallet (opzionale)</label>
     <input type="file" id="walletFile" accept=".wallet" />
-    <input type="hidden" id="walletName" value="testwallet_1.wallet" />
-    <label>Password API / Wallet</label>
-    <input id="walletPass" value="desy2011" />
-</div>
 
-<div class="section grid2">
+    <label style="margin-top:12px;">Oppure inserisci il nome del wallet da creare</label>
+    <input type="text" id="walletName" placeholder="Nome wallet (es. mywallet.wallet)" />
+
+    <div class="note">Se selezioni un file .wallet, il campo nome si compila automaticamente. Se vuoi creare un nuovo wallet, inserisci un nome qui sotto.</div>
+
+    <label>Password API / Wallet</label>
+    <input id="walletPass" value="tuapassword" />
+  </div>
+</details>
+
+<!-- Address / Amount -->
+<details>
+  <summary><span class="label">馃摤 Indirizzo & Importo</span> <span class="chev">鈻�</span></summary>
+  <div class="section grid2">
     <div>
         <label>Indirizzo / Address</label>
         <input id="txAddress" placeholder="indirizzo" />
     </div>
     <div>
-        <label>Importo (unità interne)</label>
+        <label>Importo (unit脿 interne)</label>
         <input id="txAmount" type="number" placeholder="Es. 1000000" />
     </div>
-</div>
+  </div>
+</details>
 
-<div class="section">
+<!-- Payment / Keys / Mnemonic -->
+<details>
+  <summary><span class="label">馃攽 Keys / Seed / Payment ID</span> <span class="chev">鈻�</span></summary>
+  <div class="section">
     <label>Payment ID (facoltativo)</label>
     <input id="txPaymentID" placeholder="payment id" />
-    <label>Private Spend Key (per import keys)</label>
+    <label>Private Spend Key</label>
     <input id="spendKey" placeholder="private spend key" />
-    <label>Private View Key (per import keys)</label>
+    <label>Private View Key</label>
     <input id="viewKey" placeholder="private view key" />
-    <label>Mnemonic seed (per import seed)</label>
+    <label>Mnemonic seed</label>
     <textarea id="mnemonic" placeholder="seed mnemonico..."></textarea>
-</div>
+  </div>
+</details>
 
-<div class="section">
-    <h3>Wallet</h3>
-    <button id="btnCreate">Crea Wallet</button>
-    <button id="btnOpen">Apri Wallet</button>
-    <button id="btnClose">Chiudi Wallet</button>
-    <button id="btnSave">Salva Wallet</button>
-    <button id="btnDownloadWallet">Scarica Wallet</button>
-    <button id="btnImportSeed">Importa da Seed</button>
-    <button id="btnImportKeys">Importa da Keys</button>
-    <button id="btnShowKeys">Mostra Keys</button>
-    <button id="btnShowMnemonic">Mostra Mnemonic (per indirizzo)</button>
-</div>
+<!-- Wallet actions -->
+<details>
+  <summary><span class="label">鈿� Operazioni Wallet</span> <span class="chev">鈻�</span></summary>
+  <div class="section">
+    <h3 style="margin-top:0">Wallet</h3>
+    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+      <button id="btnCreate">Crea Wallet</button>
+      <button id="btnOpen">Apri Wallet</button>
+      <button id="btnClose">Chiudi Wallet</button>
+      <button id="btnSave">Salva Wallet</button>
+      <button id="btnDownloadWallet">Scarica Wallet</button>
+      <button id="btnImportSeed">Importa da Seed</button>
+      <button id="btnImportKeys">Importa da Keys</button>
+      <button id="btnShowKeys">Mostra Keys</button>
+      <button id="btnShowMnemonic">Mostra Mnemonic (per indirizzo)</button>
+    </div>
+  </div>
+</details>
 
-<div class="section">
-    <h3>Indirizzi / Bilanci</h3>
-    <button id="btnAddresses">Lista Indirizzi</button>
-    <button id="btnPrimary">Indirizzo Principale</button>
-    <button id="btnCreateAddr">Crea Nuovo Indirizzo</button>
-    <button id="btnBalance">Bilancio Totale</button>
-    <button id="btnBalanceAddr">Bilancio per Indirizzo</button>
-    <button id="btnValidateAddr" class="warn">Valida Indirizzo</button>
-</div>
+<!-- Addresses / Balances -->
+<details>
+  <summary><span class="label">馃挵 Indirizzi / Bilanci</span> <span class="chev">鈻�</span></summary>
+  <div class="section">
+    <h3 style="margin-top:0">Indirizzi / Bilanci</h3>
+    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+      <button id="btnAddresses">Lista Indirizzi</button>
+      <button id="btnPrimary">Indirizzo Principale</button>
+      <button id="btnCreateAddr">Crea Nuovo Indirizzo</button>
+      <button id="btnBalance">Bilancio Totale</button>
+      <button id="btnBalanceAddr">Bilancio per Indirizzo</button>
+      <button id="btnValidateAddr" class="warn">Valida Indirizzo</button>
+    </div>
+  </div>
+</details>
 
-<div class="section">
-    <h3>Transazioni</h3>
+<!-- Transactions -->
+<details>
+  <summary><span class="label">馃Ь Transazioni</span> <span class="chev">鈻�</span></summary>
+  <div class="section">
+    <h3 style="margin-top:0">Transazioni</h3>
     <div class="row">
         <div class="col"><button id="btnListTx">Lista Transazioni</button></div>
         <div class="col"><button id="btnUnconfirmed">Unconfirmed Outgoing</button></div>
@@ -97,10 +207,14 @@ button.warn { background:#f57c00; }
         <button id="btnPrepare">Prepara Transazione</button>
     </div>
     <label class="small">Per altre operazioni avanzate usa il pannello <strong>Custom request</strong> sotto.</label>
-</div>
+  </div>
+</details>
 
-<div class="section">
-    <h3>Stato / Nodo / Export</h3>
+<!-- Node / Export -->
+<details>
+  <summary><span class="label">馃 Stato / Nodo / Export</span> <span class="chev">鈻�</span></summary>
+  <div class="section">
+    <h3 style="margin-top:0">Stato / Nodo / Export</h3>
     <button id="btnStatus">Stato Wallet</button>
     <button id="btnExport">Esporta JSON (server)</button>
     <div style="margin-top:10px;">
@@ -109,10 +223,17 @@ button.warn { background:#f57c00; }
         <button id="btnNodeGet">Get Node</button>
         <button id="btnNodeSet">Set Node</button>
     </div>
-</div>
+  </div>
+</details>
 
-<div class="section">
-    <h3>Custom request</h3>
+<!-- Custom -->
+<details>
+  <summary><span class="label">馃И Custom request (solo esperti)</span> <span class="chev">鈻�</span></summary>
+  <div class="section">
+    <p class="note" style="color:#d32f2f;">
+      鈿狅笍 Questa funzione 猫 riservata a utenti esperti. Pu貌 modificare lo stato del wallet o inviare transazioni. Usa a tuo rischio.
+    </p>
+    <label><input type="checkbox" id="confirmAdvanced" /> Ho compreso i rischi</label>
     <label>Endpoint (es. /transactions/send/basic)</label>
     <input id="customEndpoint" placeholder="/transactions/send/basic" />
     <label>Method</label>
@@ -120,165 +241,228 @@ button.warn { background:#f57c00; }
     <label>JSON body (facoltativo)</label>
     <textarea id="customData" placeholder='{"address":"...","amount":1000000}'></textarea>
     <div style="margin-top:8px;">
-        <button id="btnCustom">Esegui Custom</button>
+        <button id="btnCustom" disabled>Esegui Custom</button>
     </div>
-</div>
+  </div>
+</details>
 
 <pre id="output">Usa i pulsanti per interagire con il wallet...</pre>
 
 <script>
+const API_URL = 'https://www.mevacoin.com/api.php';
+const DOWNLOAD_URL = 'https://www.mevacoin.com/download_wallet.php';
+const API_KEY = 'desy2011';
+
 const out = document.getElementById('output');
+const walletFileInput = document.getElementById('walletFile');
+const walletNameInput = document.getElementById('walletName');
+
+function logOut(txt) {
+    out.textContent = typeof txt === 'string' ? txt : JSON.stringify(txt, null, 2);
+}
 
 async function callApi(bodyObj) {
-    out.textContent = 'Eseguo...';
+    logOut('Eseguo...');
     try {
-        const res = await fetch('api.php', {
+        const res = await fetch(API_URL, {
             method: 'POST',
-            headers: {'Content-Type':'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-KEY': API_KEY
+            },
             body: JSON.stringify(bodyObj)
         });
+
         const text = await res.text();
         try {
             const json = JSON.parse(text);
-            out.innerText = JSON.stringify(json, null, 2);
-        } catch(e) {
-            out.innerText = text;
+            logOut(json);
+            return json;
+        } catch (e) {
+            logOut(text);
+            return { status: 'error', wallet_response_raw: text };
         }
     } catch (e) {
-        out.innerText = 'Errore fetch: ' + e.message;
+        logOut('Errore fetch: ' + e.message);
+        return { status: 'error', message: e.message };
     }
 }
 
 function baseParams() {
-    return {
-        filename: document.getElementById('walletName').value.trim(),
-        password: document.getElementById('walletPass').value.trim()
-    };
+    const name = (walletNameInput.value || '').trim();
+    const pass = (document.getElementById('walletPass').value || '').trim();
+    return { filename: name, password: pass };
 }
 
-// Selezione file wallet
-document.getElementById('walletFile').addEventListener('change', function(e) {
+walletFileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
-    if(file) {
-        document.getElementById('walletName').value = file.name;
-        out.textContent = 'Wallet selezionato: ' + file.name;
+    if (file) {
+        walletNameInput.value = file.name;
+        logOut('Wallet selezionato: ' + file.name);
     }
 });
 
-// Wallet buttons
-document.getElementById('btnCreate').addEventListener('click', ()=> callApi(Object.assign({action:'create'}, baseParams())));
-document.getElementById('btnOpen').addEventListener('click', ()=> callApi(Object.assign({action:'open'}, baseParams())));
-document.getElementById('btnClose').addEventListener('click', ()=> callApi(Object.assign({action:'close'}, baseParams())));
-document.getElementById('btnSave').addEventListener('click', ()=> callApi(Object.assign({action:'save'}, baseParams())));
+function ensureWalletNameOrAlert() {
+    const name = (walletNameInput.value || '').trim();
+    if (!name) {
+        alert('Inserisci il nome del wallet (es. mywallet.wallet) o seleziona un file .wallet');
+        return null;
+    }
+    if (!name.toLowerCase().endsWith('.wallet')) {
+        if (!confirm('Il nome non termina con .wallet. Aggiungere automaticamente l\'estensione?')) {
+            return null;
+        }
+        walletNameInput.value = name + '.wallet';
+    }
+    return walletNameInput.value.trim();
+}
 
-document.getElementById('btnImportSeed').addEventListener('click', ()=>{
-    const m = document.getElementById('mnemonic').value.trim();
-    if(!m) { alert('Inserisci il seed!'); return; }
-    callApi(Object.assign({action:'import_seed', mnemonic:m}, baseParams()));
+/* Bottoni API */
+document.getElementById('btnCreate').addEventListener('click', async () => {
+    const name = ensureWalletNameOrAlert(); if (!name) return;
+    const params = baseParams(); params.action = 'create'; await callApi(params);
 });
-document.getElementById('btnImportKeys').addEventListener('click', ()=>{
+document.getElementById('btnOpen').addEventListener('click', async () => {
+    const name = ensureWalletNameOrAlert(); if (!name) return;
+    const params = baseParams(); params.action = 'open'; await callApi(params);
+});
+document.getElementById('btnClose').addEventListener('click', async () => {
+    const params = baseParams(); params.action = 'close'; await callApi(params);
+});
+document.getElementById('btnSave').addEventListener('click', async () => {
+    const params = baseParams(); params.action = 'save'; await callApi(params);
+});
+
+/* Import Seed / Keys */
+document.getElementById('btnImportSeed').addEventListener('click', async () => {
+    const m = document.getElementById('mnemonic').value.trim();
+    if (!m) { alert('Inserisci il seed!'); return; }
+    const name = ensureWalletNameOrAlert(); if (!name) return;
+    const params = baseParams(); params.action = 'import_seed'; params.mnemonic = m;
+    await callApi(params);
+});
+
+document.getElementById('btnImportKeys').addEventListener('click', async () => {
     const s = document.getElementById('spendKey').value.trim();
     const v = document.getElementById('viewKey').value.trim();
-    if(!s || !v) { alert('Inserisci spend+view key'); return; }
-    callApi(Object.assign({action:'import_key', spend_key:s, view_key:v}, baseParams()));
+    if (!s || !v) { alert('Inserisci spend+view key'); return; }
+    const name = ensureWalletNameOrAlert(); if (!name) return;
+    const params = baseParams(); params.action = 'import_key'; params.spend_key = s; params.view_key = v;
+    await callApi(params);
 });
 
-// SHOW KEYS e MNEMONIC
-document.getElementById('btnShowKeys').addEventListener('click', ()=> callApi(Object.assign({action:'keys'}, baseParams())));
-document.getElementById('btnShowMnemonic').addEventListener('click', ()=> {
+/* Mostra keys / mnemonic */
+document.getElementById('btnShowKeys').addEventListener('click', async () => {
+    const params = baseParams(); params.action = 'keys'; await callApi(params);
+});
+document.getElementById('btnShowMnemonic').addEventListener('click', async () => {
     const a = document.getElementById('txAddress').value.trim();
-    if(!a) { alert('Inserisci indirizzo per il mnemonic'); return; }
-    callApi(Object.assign({action:'keys_mnemonic', address:a}, baseParams()));
+    if (!a) { alert('Inserisci indirizzo per il mnemonic'); return; }
+    const params = baseParams(); params.action = 'keys_mnemonic'; params.address = a; await callApi(params);
 });
 
-// Addresses / Balance
-document.getElementById('btnAddresses').addEventListener('click', ()=> callApi(Object.assign({action:'addresses'}, baseParams())));
-document.getElementById('btnPrimary').addEventListener('click', ()=> callApi(Object.assign({action:'address'}, baseParams())));
-document.getElementById('btnCreateAddr').addEventListener('click', ()=> callApi(Object.assign({action:'address_create'}, baseParams())));
-document.getElementById('btnBalance').addEventListener('click', ()=> callApi(Object.assign({action:'balance'}, baseParams())));
-document.getElementById('btnBalanceAddr').addEventListener('click', ()=> {
+/* Address & Balance */
+document.getElementById('btnAddresses').addEventListener('click', async () => { const p = baseParams(); p.action='addresses'; await callApi(p); });
+document.getElementById('btnPrimary').addEventListener('click', async () => { const p = baseParams(); p.action='address'; await callApi(p); });
+document.getElementById('btnCreateAddr').addEventListener('click', async () => { const p = baseParams(); p.action='address_create'; await callApi(p); });
+document.getElementById('btnBalance').addEventListener('click', async () => { const p = baseParams(); p.action='balance'; await callApi(p); });
+document.getElementById('btnBalanceAddr').addEventListener('click', async () => {
     const a = document.getElementById('txAddress').value.trim();
-    if(!a) { alert('Inserisci indirizzo'); return; }
-    callApi(Object.assign({action:'balance_addr', address:a}, baseParams()));
+    if (!a) { alert('Inserisci indirizzo'); return; }
+    const p = baseParams(); p.action='balance_addr'; p.address=a; await callApi(p);
 });
-document.getElementById('btnValidateAddr').addEventListener('click', ()=> {
+document.getElementById('btnValidateAddr').addEventListener('click', async () => {
     const a = document.getElementById('txAddress').value.trim();
-    if(!a) { alert('Inserisci indirizzo'); return; }
-    callApi(Object.assign({action:'addresses_validate', address:a}, baseParams()));
-});
-
-// Transactions
-document.getElementById('btnListTx').addEventListener('click', ()=> callApi(Object.assign({action:'transactions'}, baseParams())));
-document.getElementById('btnUnconfirmed').addEventListener('click', ()=> callApi(Object.assign({action:'transactions_unconfirmed'}, baseParams())));
-document.getElementById('btnSend').addEventListener('click', ()=> {
-    const a = document.getElementById('txAddress').value.trim();
-    const amt = parseInt(document.getElementById('txAmount').value.trim()) || 0;
-    const pid = document.getElementById('txPaymentID').value.trim();
-    if(!a || !amt) { alert('Inserisci indirizzo e importo'); return; }
-    callApi(Object.assign({action:'send', address:a, amount:amt, paymentID:pid}, baseParams()));
-});
-document.getElementById('btnPrepare').addEventListener('click', ()=> {
-    const a = document.getElementById('txAddress').value.trim();
-    const amt = parseInt(document.getElementById('txAmount').value.trim()) || 0;
-    const pid = document.getElementById('txPaymentID').value.trim();
-    if(!a || !amt) { alert('Inserisci indirizzo e importo'); return; }
-    callApi(Object.assign({action:'transactions_prepare_basic', address:a, amount:amt, paymentID:pid}, baseParams()));
+    if (!a) { alert('Inserisci indirizzo'); return; }
+    const p = baseParams(); p.action='addresses_validate'; p.address=a; await callApi(p);
 });
 
-// Download wallet
-document.getElementById('btnDownloadWallet').addEventListener('click', async ()=>{
-    const params = baseParams();
-    params.action = 'download_wallet';
-    out.textContent = 'Generazione token per download...';
+/* Transactions */
+document.getElementById('btnListTx').addEventListener('click', async () => { const p=baseParams(); p.action='transactions'; await callApi(p); });
+document.getElementById('btnUnconfirmed').addEventListener('click', async () => { const p=baseParams(); p.action='transactions_unconfirmed'; await callApi(p); });
+
+document.getElementById('btnSend').addEventListener('click', async () => {
+    const a=document.getElementById('txAddress').value.trim();
+    const amt=parseInt(document.getElementById('txAmount').value.trim())||0;
+    const pid=document.getElementById('txPaymentID').value.trim();
+    if(!a||!amt){alert('Inserisci indirizzo e importo');return;}
+    const p=baseParams(); p.action='send'; p.address=a; p.amount=amt; p.paymentID=pid; await callApi(p);
+});
+
+document.getElementById('btnPrepare').addEventListener('click', async () => {
+    const a=document.getElementById('txAddress').value.trim();
+    const amt=parseInt(document.getElementById('txAmount').value.trim())||0;
+    const pid=document.getElementById('txPaymentID').value.trim();
+    if(!a||!amt){alert('Inserisci indirizzo e importo');return;}
+    const p=baseParams(); p.action='transactions_prepare_basic'; p.address=a; p.amount=amt; p.paymentID=pid; await callApi(p);
+});
+
+/* Download wallet */
+document.getElementById('btnDownloadWallet').addEventListener('click', async () => {
+    const name = ensureWalletNameOrAlert(); if (!name) return;
+    const params = baseParams(); params.action = 'download_wallet';
+    logOut('Generazione token per download...');
     try {
-        const res = await fetch('api.php', {
+        const res = await fetch(API_URL, {
             method: 'POST',
-            headers:{'Content-Type':'application/json'},
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': API_KEY },
             body: JSON.stringify(params)
         });
         const json = await res.json();
-        if(json.status === 'success' && json.token) {
+        if (json.status === 'success' && json.token) {
             const token = json.token;
-            const url = `download_wallet.php?token=${token}`;
+            const url = `${DOWNLOAD_URL}?token=${token}`;
             const a = document.createElement('a');
             a.href = url;
-            a.download = params.filename;
+            a.download = name;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            out.textContent = 'Download avviato...';
+            logOut('Download avviato...');
         } else {
-            out.textContent = 'Errore generazione token: '+JSON.stringify(json);
+            logOut('Errore generazione token: ' + JSON.stringify(json));
         }
-    } catch(e) {
-        out.textContent = 'Errore fetch: '+e.message;
+    } catch (e) {
+        logOut('Errore fetch: ' + e.message);
     }
 });
 
-// Status / Node / Export
-document.getElementById('btnStatus').addEventListener('click', ()=> callApi(Object.assign({action:'status'}, baseParams())));
-document.getElementById('btnExport').addEventListener('click', ()=> {
+/* Status / Node / Export */
+document.getElementById('btnStatus').addEventListener('click', async () => { const p=baseParams(); p.action='status'; await callApi(p); });
+document.getElementById('btnExport').addEventListener('click', async () => {
     const path = prompt('Percorso file sul server dove esportare il JSON','/tmp/wallet_export.json');
-    if(!path) return;
-    callApi(Object.assign({action:'export_json', filepath:path}, baseParams()));
+    if (!path) return;
+    const p=baseParams(); p.action='export_json'; p.filepath=path; await callApi(p);
 });
-document.getElementById('btnNodeGet').addEventListener('click', ()=> callApi(Object.assign({action:'node_get'}, baseParams())));
-document.getElementById('btnNodeSet').addEventListener('click', ()=> {
-    const node = document.getElementById('nodeAddr').value.trim();
-    if(!node) { alert('Inserisci node:port'); return; }
-    const parts = node.split(':');
-    callApi(Object.assign({action:'node_put', node:parts[0], port: parseInt(parts[1]||0)}, baseParams()));
+document.getElementById('btnNodeGet').addEventListener('click', async () => { const p=baseParams(); p.action='node_get'; await callApi(p); });
+document.getElementById('btnNodeSet').addEventListener('click', async () => {
+    const node=document.getElementById('nodeAddr').value.trim();
+    if(!node){alert('Inserisci node:port');return;}
+    const parts=node.split(':');
+    const p=baseParams(); p.action='node_put'; p.node=parts[0]; p.port=parseInt(parts[1]||0);
+    await callApi(p);
 });
 
-// Custom
-document.getElementById('btnCustom').addEventListener('click', ()=> {
-    const endp = document.getElementById('customEndpoint').value.trim();
-    const method = document.getElementById('customMethod').value.trim();
-    let data = null;
-    try { data = document.getElementById('customData').value.trim() ? JSON.parse(document.getElementById('customData').value) : null; } catch(e) { alert('JSON body non valido'); return; }
-    if(!endp.startsWith('/')) { alert('Endpoint deve iniziare con /'); return; }
-    callApi(Object.assign({action:'custom', endpoint:endp, method:method, data:data}, baseParams()));
+/* Custom */
+document.getElementById('confirmAdvanced').addEventListener('change', function() {
+    document.getElementById('btnCustom').disabled = !this.checked;
+});
+document.getElementById('btnCustom').addEventListener('click', async () => {
+    const endp=document.getElementById('customEndpoint').value.trim();
+    const method=document.getElementById('customMethod').value.trim();
+    let data=null;
+    try { data=document.getElementById('customData').value.trim()?JSON.parse(document.getElementById('customData').value):null; }
+    catch(e){ alert('JSON body non valido'); return; }
+    if(!endp.startsWith('/')){ alert('Endpoint deve iniziare con /'); return; }
+    const p=baseParams(); p.action='custom'; p.endpoint=endp; p.method=method; p.data=data;
+    await callApi(p);
 });
 </script>
+<footer style="margin-top:20px; text-align:center; font-size:12px;">
+  <a href="https://www.mevacoin.com/privacy.html" target="_blank" rel="noopener noreferrer">
+    Informativa sulla Privacy
+  </a>
+</footer>
+
 </body>
 </html>
