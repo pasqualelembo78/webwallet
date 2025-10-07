@@ -1,4 +1,16 @@
 <?php
+// Abilita CORS per richieste da qualsiasi origine
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Content-Type, X-API-KEY");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+
+// Rispondi subito alle richieste preflight (OPTIONS)
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
+
 // api.php - proxy e helper verso wallet-api locale (Mevacoin)
 // Debug: /tmp/api_debug.log e /tmp/curl_verbose.log
 
@@ -367,16 +379,18 @@ curl_close($ch);
 
 file_put_contents($logFile, "Request: [$method] $url\nPayload: ".json_encode($payload)."\nHTTP_CODE: $httpCode\nCurlErr: $curlError\nResponse: $response\n\n", FILE_APPEND);
 
-// Output standardized
+// Decodifica la risposta JSON interna, se valida
+$decodedResponse = json_decode($response, true);
+
+// Se la decodifica è riuscita, usa l'array. Altrimenti tieni la stringa originale
 $output = [
     'status' => ($curlError || ($httpCode !== 200 && $httpCode !== 204 && $httpCode !== 201)) ? 'error' : 'success',
-    'http_code' => $httpCode,
-    'curl_error' => $curlError ?: null,
-    'wallet_response_raw' => $response,
-    'wallet_file' => $fullPath,
-    'logfile' => $logFile,
-    'verbose_file' => $verboseFile
+    'wallet_response' => $decodedResponse !== null ? $decodedResponse : $response
 ];
 
-if ($curlError || ($httpCode !== 200 && $httpCode !== 204 && $httpCode !== 201)) http_response_code(500);
+if ($curlError || ($httpCode !== 200 && $httpCode !== 204 && $httpCode !== 201)) {
+    http_response_code(500);
+}
+
 echo json_encode($output, JSON_PRETTY_PRINT);
+
