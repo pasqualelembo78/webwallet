@@ -21,7 +21,7 @@ $logFile = '/tmp/api_debug.log';
 $verboseFile = '/tmp/curl_verbose.log';
 
 // Configurazioni (puoi sovrascrivere con variabili d'ambiente)
-$apiHost = getenv('MEVACOIN_API_HOST') ?: 'https://www.mevacoin.com/wallet-api';
+$apiHost = getenv('MEVACOIN_API_HOST') ?: 'https://www.mevacoin.com/';
 $apiKey  = getenv('API_KEY') ?: 'desy2011';
 
 if (!file_exists($logFile)) @touch($logFile);
