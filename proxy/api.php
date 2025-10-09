@@ -1,7 +1,10 @@
 <?php
-// Abilita CORS per richieste da qualsiasi origine
+// api.php - proxy e helper verso wallet-api (Mevacoin)
+// Pronto per funzionare tramite reverse proxy SSL che gestisce l'X-API-KEY
+
+// Abilita CORS per richieste da qualsiasi origine (adatta se serve per browser)
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type, X-API-KEY, Accept");
+header("Access-Control-Allow-Headers: Content-Type, Accept");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 
 // Rispondi subito alle richieste preflight (OPTIONS)
@@ -10,26 +13,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// api.php - proxy e helper verso wallet-api (Mevacoin)
-// Debug: /tmp/api_debug.log e /tmp/curl_verbose.log
-
 header('Content-Type: application/json; charset=utf-8');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Log files
 $logFile = '/tmp/api_debug.log';
 $verboseFile = '/tmp/curl_verbose.log';
 
-// Configurazioni (puoi sovrascrivere con variabili d'ambiente)
-$apiHost = getenv('MEVACOIN_API_HOST') ?: 'https://www.mevacoin.com/';
-$apiKey  = getenv('API_KEY') ?: 'desy2011';
+// Configurazioni (sovrascrivibili con variabili d'ambiente)
+$apiHost = getenv('MEVACOIN_API_HOST') ?: 'https://www.mevacoin.com';
+$apiHost = rtrim($apiHost, '/'); // elimina slash finale se presente
+$insecure = getenv('MEVACOIN_API_INSECURE') !== false ? (bool)intval(getenv('MEVACOIN_API_INSECURE')) : true; // default true per compatibilità test
+// NOTA: impostare MEVACOIN_API_INSECURE=0 in produzione se il certificato è valido
 
 if (!file_exists($logFile)) @touch($logFile);
 if (!file_exists($verboseFile)) @touch($verboseFile);
 @chmod($logFile, 0664);
 @chmod($verboseFile, 0664);
 
-file_put_contents($logFile, "===== Nuova chiamata ===== ".date('Y-m-d H:i:s')."\n", FILE_APPEND);
+file_put_contents($logFile, "===== Nuova chiamata ===== ".date('Y-m-d H:i:s')." PID:".getmypid()."\n", FILE_APPEND);
 
 set_error_handler(function($errno, $errstr, $errfile, $errline) use ($logFile){
     file_put_contents($logFile, "PHP Error [$errno] $errstr in $errfile:$errline\n", FILE_APPEND);
@@ -59,7 +62,7 @@ $filepath   = $input['filepath'] ?? '/tmp/export_wallet.json';
 $startHeight = isset($input['startHeight']) ? intval($input['startHeight']) : null;
 $endHeight   = isset($input['endHeight']) ? intval($input['endHeight']) : null;
 
-// base dir per file wallet nel filesystem del demone (adatta al tuo sistema)
+// base dir per file wallet nel filesystem del demone (usata solo per controllo download/export)
 $baseDir  = '/opt/mevacoin/build/src/';
 $fullPath = $baseDir . $filename;
 
@@ -73,14 +76,15 @@ switch ($action) {
     // WALLET: create / open / import / close
     //
     case 'create':
+        // inviamo solo il nome del file: il proxy / wallet-api gestisce il percorso
         $url = $apiHost . '/wallet/create';
         $method = 'POST';
-        $payload = ['filename' => $fullPath, 'password' => $password];
+        $payload = ['filename' => $filename, 'password' => $password];
         break;
     case 'open':
         $url = $apiHost . '/wallet/open';
         $method = 'POST';
-        $payload = ['filename' => $fullPath, 'password' => $password];
+        $payload = ['filename' => $filename, 'password' => $password];
         break;
     case 'close':
         $url = $apiHost . '/wallet';
@@ -90,30 +94,30 @@ switch ($action) {
     case 'import/seed':
         $url = $apiHost . '/wallet/import/seed';
         $method = 'POST';
-        $payload = ['filename' => $fullPath, 'password' => $password, 'mnemonic' => $mnemonic];
+        $payload = ['filename' => $filename, 'password' => $password, 'mnemonic' => $mnemonic];
         break;
     case 'import_key':
     case 'import/key':
         $url = $apiHost . '/wallet/import/key';
         $method = 'POST';
-        $payload = ['filename' => $fullPath, 'password' => $password, 'privateSpendKey' => $keys_spend, 'privateViewKey' => $keys_view];
+        $payload = ['filename' => $filename, 'password' => $password, 'privateSpendKey' => $keys_spend, 'privateViewKey' => $keys_view];
         break;
     case 'import_view':
     case 'import/view':
         $url = $apiHost . '/wallet/import/view';
         $method = 'POST';
-        $payload = ['filename' => $fullPath, 'password' => $password, 'publicSpendKey' => $input['publicSpendKey'] ?? '', 'privateViewKey' => $keys_view];
+        $payload = ['filename' => $filename, 'password' => $password, 'publicSpendKey' => $input['publicSpendKey'] ?? '', 'privateViewKey' => $keys_view];
         break;
 
     //
     // ADDRESSES
     //
     case 'addresses':
-        $url = $apiHost . '/addresses';
+        $url = $apiHost . '/wallet/addresses';
         $method = 'GET';
         break;
     case 'address': // primary
-        $url = $apiHost . '/addresses/primary';
+        $url = $apiHost . '/wallet/addresses/primary';
         $method = 'GET';
         break;
     case 'address_create':
@@ -293,12 +297,11 @@ switch ($action) {
     // DOWNLOAD WALLET (genera token temporaneo)
     //
     case 'download_wallet':
-        // Controllo file esista
+        // Controllo file esista (usiamo percorso filesystem)
         if (!file_exists($fullPath)) {
             echo json_encode(['status'=>'error','message'=>"File wallet non trovato: $filename"]);
             exit;
         }
-        // Genero un token temporaneo
         try {
             $token = bin2hex(random_bytes(16));
             $tokenFile = sys_get_temp_dir() . "/wallet_token_$token.json";
@@ -342,7 +345,7 @@ switch ($action) {
         exit;
 }
 
-// Se $url non è stato impostato (ad esempio per download_wallet abbiamo già fatto exit), errore
+// Verifica URL costruita
 if (empty($url)) {
     echo json_encode(['status'=>'error','message'=>'Nessuna URL impostata per l\'azione richiesta']);
     exit;
@@ -358,18 +361,24 @@ curl_setopt($ch, CURLOPT_STDERR, $verboseHandle);
 curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
 curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
-// headers - X-API-KEY from env
+// Headers (non aggiungiamo X-API-KEY: il reverse proxy lo fa)
 $headers = ["Accept: application/json"];
-if (!empty($apiKey)) $headers[] = "X-API-KEY: $apiKey";
-
-// If payload present, add content-type
 if (!is_null($payload)) $headers[] = 'Content-Type: application/json';
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+// SSL verify (configurabile via env)
+if ($insecure) {
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+} else {
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+}
 
 // Set method & body
 $method = strtoupper($method);
 if ($method === 'GET') {
-    // default - nothing to do
+    // default
 } elseif ($method === 'POST') {
     curl_setopt($ch, CURLOPT_POST, true);
     if (!is_null($payload)) curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
@@ -380,7 +389,6 @@ if ($method === 'GET') {
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
     if (!is_null($payload)) curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 } else {
-    // Other custom methods
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
     if (!is_null($payload)) curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
 }
