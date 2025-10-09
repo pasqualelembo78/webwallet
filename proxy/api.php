@@ -1,13 +1,13 @@
 <?php
 // api.php - proxy e helper verso wallet-api (Mevacoin)
-// Pronto per funzionare tramite reverse proxy SSL che gestisce l'X-API-KEY
+// Progettato per funzionare tramite reverse proxy SSL che inietta la X-API-KEY
 
-// Abilita CORS per richieste da qualsiasi origine (adatta se serve per browser)
+// CORS
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type, Accept");
+header("Access-Control-Allow-Headers: Content-Type, Accept, X-Requested-With");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 
-// Rispondi subito alle richieste preflight (OPTIONS)
+// Preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
@@ -21,12 +21,12 @@ ini_set('display_errors', 1);
 $logFile = '/tmp/api_debug.log';
 $verboseFile = '/tmp/curl_verbose.log';
 
-// Configurazioni (sovrascrivibili con variabili d'ambiente)
-$apiHost = getenv('MEVACOIN_API_HOST') ?: 'https://www.mevacoin.com';
-$apiHost = rtrim($apiHost, '/'); // elimina slash finale se presente
-$insecure = getenv('MEVACOIN_API_INSECURE') !== false ? (bool)intval(getenv('MEVACOIN_API_INSECURE')) : true; // default true per compatibilità test
-// NOTA: impostare MEVACOIN_API_INSECURE=0 in produzione se il certificato è valido
+// Config (override via env)
+$apiHost = getenv('MEVACOIN_API_HOST') ?: 'https://www.mevacoin.com/wallet-api';
+$apiHost = rtrim($apiHost, '/');
+$insecure = getenv('MEVACOIN_API_INSECURE') !== false ? (bool)intval(getenv('MEVACOIN_API_INSECURE')) : true; // default true per test
 
+// Ensure logs exist
 if (!file_exists($logFile)) @touch($logFile);
 if (!file_exists($verboseFile)) @touch($verboseFile);
 @chmod($logFile, 0664);
@@ -34,6 +34,7 @@ if (!file_exists($verboseFile)) @touch($verboseFile);
 
 file_put_contents($logFile, "===== Nuova chiamata ===== ".date('Y-m-d H:i:s')." PID:".getmypid()."\n", FILE_APPEND);
 
+// Error handlers
 set_error_handler(function($errno, $errstr, $errfile, $errline) use ($logFile){
     file_put_contents($logFile, "PHP Error [$errno] $errstr in $errfile:$errline\n", FILE_APPEND);
 });
@@ -48,7 +49,7 @@ file_put_contents($logFile, "Input raw: $inputRaw\n", FILE_APPEND);
 $input = json_decode($inputRaw, true) ?: [];
 file_put_contents($logFile, "Input decodificato: ".print_r($input, true)."\n", FILE_APPEND);
 
-// Basic params (sanitizzo il filename)
+// Basic params (sanitizzo filename)
 $action    = $input['action'] ?? 'create';
 $filename  = isset($input['filename']) ? basename($input['filename']) : 'testwallet_1.wallet';
 $password  = $input['password'] ?? 'desy2011';
@@ -62,21 +63,18 @@ $filepath   = $input['filepath'] ?? '/tmp/export_wallet.json';
 $startHeight = isset($input['startHeight']) ? intval($input['startHeight']) : null;
 $endHeight   = isset($input['endHeight']) ? intval($input['endHeight']) : null;
 
-// base dir per file wallet nel filesystem del demone (usata solo per controllo download/export)
+// base dir per file wallet (usata solo per controlli di filesystem)
 $baseDir  = '/opt/mevacoin/build/src/';
 $fullPath = $baseDir . $filename;
 
 $url = '';
-$method = 'GET'; // default
-$payload = null; // array or null
+$method = 'GET';
+$payload = null;
 
 // Build request depending on action
 switch ($action) {
-    //
-    // WALLET: create / open / import / close
-    //
+    // WALLET
     case 'create':
-        // inviamo solo il nome del file: il proxy / wallet-api gestisce il percorso
         $url = $apiHost . '/wallet/create';
         $method = 'POST';
         $payload = ['filename' => $filename, 'password' => $password];
@@ -109,15 +107,13 @@ switch ($action) {
         $payload = ['filename' => $filename, 'password' => $password, 'publicSpendKey' => $input['publicSpendKey'] ?? '', 'privateViewKey' => $keys_view];
         break;
 
-    //
     // ADDRESSES
-    //
     case 'addresses':
-        $url = $apiHost . '/wallet/addresses';
+        $url = $apiHost . '/addresses';
         $method = 'GET';
         break;
     case 'address': // primary
-        $url = $apiHost . '/wallet/addresses/primary';
+        $url = $apiHost . '/addresses/primary';
         $method = 'GET';
         break;
     case 'address_create':
@@ -146,9 +142,7 @@ switch ($action) {
         $method = 'GET';
         break;
 
-    //
-    // KEYS / SEED
-    //
+    // KEYS / MNEMONIC
     case 'keys':
         $url = $apiHost . '/keys';
         $method = 'GET';
@@ -165,9 +159,7 @@ switch ($action) {
         $method = 'GET';
         break;
 
-    //
-    // TRANSAZIONI
-    //
+    // TRANSACTIONS
     case 'transactions':
         $url = $apiHost . '/transactions';
         $method = 'GET';
@@ -249,9 +241,7 @@ switch ($action) {
         $method = 'GET';
         break;
 
-    //
     // BALANCE
-    //
     case 'balance':
         $url = $apiHost . '/balance';
         $method = 'GET';
@@ -266,9 +256,7 @@ switch ($action) {
         $method = 'GET';
         break;
 
-    //
     // MISC
-    //
     case 'save':
         $url = $apiHost . '/save';
         $method = 'PUT';
@@ -293,11 +281,8 @@ switch ($action) {
         $method = 'GET';
         break;
 
-    //
     // DOWNLOAD WALLET (genera token temporaneo)
-    //
     case 'download_wallet':
-        // Controllo file esista (usiamo percorso filesystem)
         if (!file_exists($fullPath)) {
             echo json_encode(['status'=>'error','message'=>"File wallet non trovato: $filename"]);
             exit;
@@ -316,9 +301,7 @@ switch ($action) {
         }
         break;
 
-    //
     // NODE
-    //
     case 'node_get':
         $url = $apiHost . '/node';
         $method = 'GET';
@@ -329,9 +312,7 @@ switch ($action) {
         $payload = ['node' => $input['node'] ?? '', 'port' => intval($input['port'] ?? 0)];
         break;
 
-    //
-    // CUSTOM: invia qualunque endpoint (path deve iniziare con /)
-    //
+    // CUSTOM
     case 'custom':
         $endpoint = $input['endpoint'] ?? '';
         if (empty($endpoint) || $endpoint[0] !== '/') { echo json_encode(['status'=>'error','message'=>'endpoint custom mancante (deve iniziare con /)']); exit; }
